@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0c2a20" />
+  <meta name="description" content="School Secret Santa portal: send a treat and a kind holiday note to a classmate." />
+  <title>North Pole Post · School Secret Santa</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%85%3C/text%3E%3C/svg%3E" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind (Play CDN, pinned) -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Fraunces', 'Georgia', 'serif'],
+            sans: ['Nunito', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Roboto', 'sans-serif'],
+            hand: ['Caveat', 'Segoe Print', 'Bradley Hand', 'cursive'],
+          },
+          colors: {
+            pine: { 950: '#081f17', 900: '#0c2a20', 800: '#123a2d', 700: '#1a4d3c', 600: '#23634d', 500: '#2f7d62' },
+            berry: { 700: '#8f1d24', 600: '#b3262e', 500: '#d23a3f', 100: '#fbe3e1' },
+            gold: { 600: '#b8862a', 500: '#d9a441', 400: '#e8bd62', 200: '#f6e2b3' },
+            frost: { DEFAULT: '#eef4ef', 50: '#f7faf7', 200: '#dde8df', 300: '#c6d6ca' },
+            cocoa: { 700: '#4e2a18', 600: '#6f412a' },
+          },
+          boxShadow: {
+            card: '0 1px 0 rgba(255,255,255,.7) inset, 0 14px 34px -14px rgba(0,0,0,.55)',
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    html, body { min-height: 100%; }
+    body {
+      background-color: #081f17;
+      background-image:
+        radial-gradient(1100px 560px at 8% -12%, rgba(47,125,98,.45), transparent 62%),
+        radial-gradient(900px 520px at 108% 6%, rgba(179,38,46,.22), transparent 60%);
+      background-attachment: fixed;
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Snowfall */
+    .snow { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+    .flake { position: absolute; top: -12px; color: #fff; animation-name: fall; animation-timing-function: linear; animation-iteration-count: infinite; will-change: transform; }
+    @keyframes fall { to { transform: translate3d(var(--drift), 106vh, 0) rotate(240deg); } }
+    @media (prefers-reduced-motion: reduce) { .snow { display: none; } .fade-in { animation: none !important; } }
+
+    /* Airmail stripe: the signature detail */
+    .airmail { height: 7px; background: repeating-linear-gradient(135deg, #b3262e 0 14px, #eef4ef 14px 24px, #1a4d3c 24px 38px, #eef4ef 38px 48px); }
+
+    /* Perforated postage stamp */
+    .stamp {
+      --hole: #eef4ef;
+      padding: 4px;
+      background:
+        radial-gradient(circle, var(--hole) 2.1px, transparent 2.6px) -4px -4px / 8px 8px,
+        #ffffff;
+      filter: drop-shadow(0 2px 2px rgba(0,0,0,.18));
+    }
+    .stamp-inner { width: 60px; height: 70px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border-radius: 1px; }
+    .stamp-choc { background: linear-gradient(160deg, #7a4a30, #4e2a18); color: #f6e2b3; }
+    .stamp-cane { background: repeating-linear-gradient(135deg, #c62f35 0 7px, #ffffff 7px 14px); color: #8f1d24; }
+    .stamp-emoji { width: 36px; height: 36px; display: grid; place-items: center; font-size: 22px; border-radius: 999px; }
+    .stamp-cane .stamp-emoji { background: #ffffff; box-shadow: 0 0 0 2px #c62f35; }
+    .stamp-label { font-size: 8.5px; font-weight: 800; letter-spacing: .04em; line-height: 1; padding: 2px 4px; border-radius: 3px; }
+    .stamp-cane .stamp-label { background: #ffffff; }
+
+    /* Postmark */
+    .postmark {
+      position: absolute; right: 84px; top: 18px; width: 64px; height: 64px;
+      border: 2px solid rgba(179,38,46,.38); border-radius: 50%;
+      color: rgba(179,38,46,.55); font-size: 8.5px; font-weight: 800; line-height: 1.15;
+      display: flex; align-items: center; justify-content: center; text-align: center;
+      transform: rotate(-14deg); pointer-events: none;
+    }
+    .postmark::before { content: ""; position: absolute; inset: 5px; border: 1px dashed rgba(179,38,46,.3); border-radius: 50%; }
+
+    /* Cork bulletin board */
+    .cork {
+      background-color: #b8875a;
+      background-image:
+        radial-gradient(rgba(60,30,10,.16) 1px, transparent 1.6px),
+        radial-gradient(rgba(255,240,220,.12) 1px, transparent 1.6px);
+      background-size: 9px 9px, 13px 13px;
+      background-position: 0 0, 4px 6px;
+      border: 10px solid #5e3a20;
+      box-shadow: inset 0 0 40px rgba(60,30,10,.35), 0 18px 40px -18px rgba(0,0,0,.6);
+    }
+    .pin { position: absolute; left: 50%; top: -6px; transform: translateX(-50%); font-size: 22px; z-index: 2; filter: drop-shadow(0 2px 1px rgba(0,0,0,.35)); }
+
+    .fade-in { animation: fadeIn .32s ease both; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    .no-scrollbar { scrollbar-width: none; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+
+    :focus-visible { outline: 3px solid #e8bd62; outline-offset: 2px; }
+
+    /* Shown only if JavaScript or the CDN scripts fail */
+    .boot { min-height: 100vh; display: grid; place-items: center; color: #eef4ef; font-family: system-ui, sans-serif; text-align: center; padding: 24px; }
+  </style>
+
+  <!-- React 18 (UMD builds, pinned) + Babel for in-browser JSX -->
+  <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js"></script>
+
+  <!-- Firebase (compat builds, pinned) — used when CONFIG.FIREBASE is filled in -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+</head>
+<body class="text-frost font-sans">
+  <div id="root">
+    <div class="boot">
+      <div>
+        <div style="font-size:48px">🎅</div>
+        <p>Loading the North Pole Post…</p>
+        <noscript><p>Please turn on JavaScript to use this site.</p></noscript>
+      </div>
+    </div>
+  </div>
+
+  <script type="text/babel" data-presets="react">
+    const { useState, useEffect, useMemo, useCallback } = React;
+
+    /* =====================================================================
+       1. SETTINGS — edit these for your school
+       ===================================================================== */
+    const CONFIG = {
+      SCHOOL_NAME: 'GEMS FirstPoint School Dubai',
+
+      // ⬇️ GO LIVE: paste your Firebase web app settings here.
+      // Firebase console → ⚙️ Project settings → General → Your apps → SDK setup and configuration → Config.
+      // While apiKey or databaseURL is empty, the site runs in single-browser TEST MODE.
+      FIREBASE: {
+        apiKey: 'AIzaSyDBY9V3Vp7HHJrPYlRjSJeQjG4Skh8ULKs',
+        authDomain: 'secret-santa-fa830.firebaseapp.com',
+        databaseURL: 'https://secret-santa-fa830-default-rtdb.firebaseio.com',
+        projectId: 'secret-santa-fa830',
+        storageBucket: 'secret-santa-fa830.firebasestorage.app',
+        messagingSenderId: '832178403522',
+        appId: '1:832178403522:web:14efc2d7b9b406053b635b',
+      },
+
+      // Teacher passcode for TEST MODE only. In live mode, teachers sign in with the
+      // email + password you create in Firebase → Authentication.
+      TEST_MODE_PASSCODE: 'santa2026',
+
+      // Require a specific school email domain, e.g. 'maplewood.edu'. Leave '' to allow any email.
+      SCHOOL_EMAIL_DOMAIN: '',
+
+      // Allow "quick name" login (no email). Set to false to require school email.
+      ALLOW_NAME_LOGIN: true,
+
+      // OPTIONAL: the public address of this page for the QR code. Leave '' to detect automatically.
+      PUBLIC_APP_URL: '',
+
+      MAX_MESSAGE_LENGTH: 500,
+      SEND_COOLDOWN_SECONDS: 15,
+    };
+    const LIVE = !!(CONFIG.FIREBASE.apiKey && CONFIG.FIREBASE.databaseURL);
+
+    const TREATS = {
+      chocolate: { id: 'chocolate', emoji: '🍫', label: 'Chocolate Bar', stampText: 'Chocolate' },
+      candycane: { id: 'candycane', emoji: '🍬', label: 'Candy Cane', stampText: 'Candy cane' },
+    };
+
+    const TABS = [
+      { id: 'send', label: 'Send a note', icon: '✉️' },
+      { id: 'inbox', label: 'My Inbox', icon: '📬' },
+      { id: 'board', label: 'Bulletin Board', icon: '📌' },
+      { id: 'admin', label: 'Teachers', icon: '🔐' },
+    ];
+
+    const LS_SESSION = 'ss-portal:session:v1';
+    const LS_LAST_SENT = 'ss-portal:last-sent';
+
+    /* =====================================================================
+       2. SMALL UTILITIES
+       ===================================================================== */
+    const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
+    const normKey = (s) => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s || '').trim());
+    const publicName = (s) => (isEmail(s) ? String(s).split('@')[0] : String(s || ''));
+
+    function prettyDate(ts) {
+      try {
+        const d = new Date(ts);
+        return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ', ' +
+               d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+      } catch (e) { return ''; }
+    }
+    function postmarkDate(ts) {
+      try { return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
+      catch (e) { return ''; }
+    }
+
+    const safeLS = {
+      get(key, fallback) {
+        try { const v = localStorage.getItem(key); return v == null ? fallback : JSON.parse(v); }
+        catch (e) { return fallback; }
+      },
+      set(key, value) {
+        try { localStorage.setItem(key, JSON.stringify(value)); return true; }
+        catch (e) { return false; }
+      },
+      del(key) { try { localStorage.removeItem(key); } catch (e) {} },
+    };
+
+    function appBaseUrl() {
+      if (CONFIG.PUBLIC_APP_URL) return CONFIG.PUBLIC_APP_URL.split('#')[0];
+      return window.location.href.split('#')[0].split('?')[0];
+    }
+
+    function tabFromHash() {
+      const h = (window.location.hash || '').replace('#', '');
+      return TABS.some((t) => t.id === h) ? h : 'send';
+    }
+
+    /* =====================================================================
+       3. SAFETY GUARD — profanity & safety filter (runs on submit)
+       Rule-based, runs entirely in the browser. Catches common evasions:
+       leetspeak (sh1t, $hit), stretched letters (fuuuck), spaced letters
+       (f u c k, f.u.c.k), masked words (f**k, sh*t), and accented look-alikes.
+       ===================================================================== */
+    // <safety>
+    const CAT = {
+      PROFANITY: 'Profanity',
+      SLUR: 'Hate speech / slur',
+      BULLY: 'Bullying / harassment',
+      THREAT: 'Violence / threats',
+      SEXUAL: 'Sexual content',
+      ILLEGAL: 'Illegal activity / school rules',
+      SELFHARM: 'Self-harm concern',
+    };
+
+    const SafetyGuard = (() => {
+      // Slurs are base64-encoded so they don't sit in plain text in the page source.
+      const dec = (list) => list.map((s) => { try { return atob(s); } catch (e) { return ''; } }).filter(Boolean);
+
+      // Word contains this anywhere (strong, unambiguous terms only)
+      const CONTAINS = {
+        [CAT.PROFANITY]: ['fuck', 'shit', 'bitch', 'motherf', 'cocksuck'],
+      };
+      // Word starts with this
+      const PREFIX = {
+        [CAT.PROFANITY]: ['fuk', 'fck', 'phuck', 'fuq', 'cunt', 'bastard', 'asshole', 'arsehole', 'wank', 'twat',
+          'slut', 'whore', 'dickhead', 'douche', 'jackass', 'dumbass', 'skank', 'bollock', 'bullsh'],
+        [CAT.SLUR]: dec(['bmlnZw==', 'ZmFnZw==', 'cmV0YXJk', 'a2lrZQ==']),
+      };
+      // Whole word only
+      const EXACT = {
+        [CAT.PROFANITY]: ['ass', 'asses', 'arse', 'dick', 'dicks', 'cock', 'cocks', 'pussy', 'pussies', 'piss',
+          'pissed', 'pissing', 'prick', 'pricks', 'crap', 'crappy', 'bugger', 'wtf', 'stfu', 'gtfo', 'fk'],
+        [CAT.SLUR]: dec(['ZmFn', 'ZmFncw==', 'c3BpYw==', 'c3BpY3M=', 'dHJhbm55', 'Y2hpbms=', 'Y2hpbmtz']),
+        [CAT.BULLY]: ['loser', 'losers', 'idiot', 'idiots', 'moron', 'morons', 'imbecile', 'fatso', 'fatty',
+          'worthless', 'pathetic', 'dumbo'],
+        [CAT.THREAT]: ['gun', 'guns', 'rifle', 'pistol', 'knife', 'knives', 'stab', 'stabbed', 'stabbing', 'murder',
+          'murdered', 'shoot', 'shooting', 'weapon', 'weapons', 'behead'],
+        [CAT.SEXUAL]: ['sex', 'sexy', 'sexual', 'sexting', 'nude', 'nudes', 'naked', 'porn', 'porno', 'pornhub', 'horny',
+          'boob', 'boobs', 'tits', 'titties', 'penis', 'vagina', 'dildo', 'orgasm', 'blowjob', 'handjob', 'onlyfans',
+          'nsfw', 'thot'],
+        [CAT.ILLEGAL]: ['weed', 'marijuana', 'cocaine', 'heroin', 'meth', 'drugs', 'vape', 'vapes', 'vaping', 'juul',
+          'edibles', 'ecstasy', 'mdma', 'lsd', 'xanax', 'shoplift', 'shoplifting', 'shoplifted'],
+      };
+      // Phrases, checked on the cleaned text (apostrophes become spaces: "you're" -> "you re")
+      const PATTERNS = [
+        [CAT.SELFHARM, /\b(kill|hurt|cut) (myself|my self)\b/],
+        [CAT.SELFHARM, /\b(want|wanna|going) to die\b|\bend (it all|my life)\b|\bsuicid/],
+        [CAT.BULLY, /\bk+ys\b|\bkill (yo)?ur ?self\b|\bkill your self\b/],
+        [CAT.BULLY, /\b(go|just|pls|please) die\b|\bdrop dead\b/],
+        [CAT.BULLY, /\b(you|u|ur|youre|your)( re| are| r)?( so| such| really| very)?( a| an)? (ugly|fat|stupid|dumb|worthless|pathetic|disgusting|loser|idiot|freak|moron|annoying|trash|garbage|useless)\b/],
+        [CAT.BULLY, /\b(no ?one|nobody) (likes|loves|cares about|wants) (you|u)\b|\b(everyone|everybody) hates (you|u)\b|\bi hate (you|u)\b/],
+        [CAT.BULLY, /\b(you|u) (suck|stink|smell)\b/],
+        [CAT.THREAT, /\b(i ll|ill|i will|i m gonna|im gonna|gonna|going to|imma|ima|i m going to|im going to)( \w+){0,2} (kill|hurt|beat|punch|stab|shoot|destroy|jump|end) (you|u|ya|ur|your)\b/],
+        [CAT.THREAT, /\bkill (you|u|ya)\b|\bwatch (your|ur) back\b|\bi know where (you|u) live\b/],
+        [CAT.THREAT, /\b(you|u)( re| are| r)? (so )?dead\b|\bshoot up\b|\bblow up (the )?school\b|\bbomb (threat|the school)\b/],
+        [CAT.SEXUAL, /\bsend (me )?(pics|nudes|pictures|a pic)\b|\b(take|takes) (it|your clothes|ur clothes) off\b/],
+        [CAT.ILLEGAL, /\bget (high|drunk|wasted|stoned)\b|\b(buy|sell|selling|sells|bought) (drugs|weed|vapes?|carts|pills)\b/],
+        [CAT.ILLEGAL, /\bsteal (from|stuff|money|the)\b|\b(cheat|cheating) on (the )?(test|exam|quiz)\b/],
+      ];
+
+      const LEET = { '0': 'o', '1': 'i', '!': 'i', '|': 'i', '3': 'e', '4': 'a', '@': 'a', '5': 's', '$': 's', '7': 't', '+': 't', '8': 'b', '9': 'g' };
+      const SUFFIXES = ['', 's', 'er', 'ers', 'ed', 'ing', 'y', 'in'];
+      const MASK_TARGETS = Array.from(new Set([
+        ...EXACT[CAT.PROFANITY],
+        ...[...CONTAINS[CAT.PROFANITY], ...PREFIX[CAT.PROFANITY]].flatMap((w) => SUFFIXES.map((s) => w + s)),
+      ]));
+
+      function normalize(raw) {
+        let t = String(raw || '').toLowerCase();
+        try { t = t.normalize('NFKD').replace(/[\u0300-\u036f]/g, ''); } catch (e) {}
+        t = t.replace(/[\u200B-\u200D\u2060\uFEFF\u00AD]/g, '');
+        // Leetspeak: only swap symbols/digits that touch a letter ("sh1t" yes, "100" no)
+        const ch = Array.from(t);
+        t = ch.map((c, i) => {
+          if (!LEET[c]) return c;
+          const prev = ch[i - 1] || '';
+          const next = ch[i + 1] || '';
+          return (/[a-z]/.test(prev) || /[a-z]/.test(next)) ? LEET[c] : c;
+        }).join('');
+        return t;
+      }
+      // "f u c k" / "f.u.c.k" / "f-u-c-k" -> "fuck"
+      const joinSpaced = (t) => t.replace(/\b[a-z](?:[\s.\-_,*]+[a-z]\b){2,}/g, (m) => m.replace(/[^a-z]/g, ''));
+      const tokenize = (t) => t.split(/[^a-z*#]+/).filter(Boolean);
+
+      function check(raw) {
+        const flags = [];
+        const add = (category, term) => {
+          if (!flags.some((f) => f.category === category && f.term === term)) flags.push({ category, term });
+        };
+        const base = normalize(raw);
+        const allTokens = Array.from(new Set([...tokenize(base), ...tokenize(joinSpaced(base))]));
+        const words = [];
+
+        for (const tok of allTokens) {
+          // Masked words like f**k, sh*t, b!tch (the ! was already turned into i)
+          if (/[*#]/.test(tok)) {
+            const letters = tok.replace(/[*#]/g, '');
+            if (letters.length >= 1 && tok.length >= 3 && tok.length <= 14) {
+              const re = new RegExp('^' + tok.replace(/[*#]/g, '.') + '$');
+              const hit = MASK_TARGETS.find((w) => re.test(w));
+              if (hit) add(CAT.PROFANITY, hit);
+            }
+          }
+          const clean = tok.replace(/[*#]/g, '');
+          if (clean) words.push(clean);
+        }
+
+        for (const w of words) {
+          const variants = Array.from(new Set([w, w.replace(/(.)\1{2,}/g, '$1$1'), w.replace(/(.)\1+/g, '$1')]));
+          for (const [cat, list] of Object.entries(EXACT)) for (const term of list) if (variants.includes(term)) add(cat, term);
+          for (const [cat, list] of Object.entries(PREFIX)) for (const term of list) if (variants.some((v) => v.startsWith(term))) add(cat, term);
+          for (const [cat, list] of Object.entries(CONTAINS)) for (const term of list) if (variants.some((v) => v.includes(term))) add(cat, term);
+        }
+
+        const flat = tokenize(base).map((w) => w.replace(/[*#]/g, '').replace(/(.)\1{2,}/g, '$1$1')).filter(Boolean).join(' ');
+        for (const [cat, re] of PATTERNS) {
+          const m = flat.match(re);
+          if (m) add(cat, m[0]);
+        }
+        return { safe: flags.length === 0, flags, categories: Array.from(new Set(flags.map((f) => f.category))) };
+      }
+
+      return { check };
+    })();
+    // </safety>
+
+    /* =====================================================================
+       4. DATA — Firebase Realtime Database (live) or this browser (test mode)
+          notes/{id}    delivered notes; everyone can read (real sender of
+                        anonymous notes is NOT stored here)
+          review/{id}   flagged notes; teachers only
+          senders/{id}  who really sent each delivered note; teachers only
+          admins/{uid}  true for each teacher account
+       ===================================================================== */
+    const byNewest = (a, b) => (b.createdAt || 0) - (a.createdAt || 0);
+    const toList = (map) => Object.values(map || {})
+      .filter((m) => m && typeof m.id === 'string' && typeof m.text === 'string')
+      .sort(byNewest);
+
+    function publicShape(n) {
+      return {
+        id: n.id, createdAt: n.createdAt, recipient: n.recipient, recipientKey: n.recipientKey,
+        treat: n.treat, text: n.text, anonymous: !!n.anonymous,
+        senderName: n.anonymous ? '' : String(n.senderName || ''),
+        senderPublic: !!n.senderPublic, recipientHidden: false, adminHidden: false,
+      };
+    }
+    function senderShape(n) {
+      return { senderName: String(n.senderName || ''), senderEmail: String(n.senderEmail || ''), senderMethod: String(n.senderMethod || '') };
+    }
+    function reviewShape(n) {
+      return {
+        ...publicShape(n), ...senderShape(n),
+        flags: (n.flags || []).map((f) => ({ category: String(f.category), term: String(f.term).slice(0, 80) })),
+      };
+    }
+
+    function friendlyError(e) {
+      const code = String((e && (e.code || e.message)) || '');
+      if (/permission[_ -]?denied/i.test(code)) return 'The database refused this action. Check that the rules from database.rules.json are published in Firebase.';
+      if (/invalid-credential|wrong-password|user-not-found|invalid-login/i.test(code)) return 'That email or password is incorrect.';
+      if (/invalid-email/i.test(code)) return 'Enter a valid email address.';
+      if (/too-many-requests/i.test(code)) return 'Too many attempts. Wait a few minutes and try again.';
+      if (/network/i.test(code)) return "Can't reach the server. Check your internet connection.";
+      return (e && e.message) || 'Something went wrong. Try again.';
+    }
+
+    // ---- Test mode: everything lives in this browser's localStorage ----
+    function makeLocalBackend() {
+      const K = { notes: 'ss-portal:v2:notes', review: 'ss-portal:v2:review', senders: 'ss-portal:v2:senders' };
+      const SS_ADMIN = 'ss-portal:v2:admin';
+      const listeners = { notes: new Set(), review: new Set(), senders: new Set(), admin: new Set() };
+      const read = (k) => safeLS.get(K[k], {}) || {};
+      const emit = (k) => listeners[k].forEach((fn) => fn(read(k)));
+      const write = (k, obj) => {
+        if (!safeLS.set(K[k], obj)) throw new Error('This browser blocked saving. Turn off private browsing and try again.');
+        emit(k);
+      };
+      const edit = (k, fn) => { const obj = read(k); fn(obj); write(k, obj); };
+      window.addEventListener('storage', (e) => { Object.keys(K).forEach((k) => { if (e.key === K[k]) emit(k); }); });
+      const watch = (k, fn) => { listeners[k].add(fn); fn(read(k)); return () => listeners[k].delete(fn); };
+      const isAdmin = () => { try { return sessionStorage.getItem(SS_ADMIN) === '1'; } catch (e) { return false; } };
+      const emitAdmin = () => listeners.admin.forEach((fn) => fn(isAdmin() ? { email: 'Test mode' } : null));
+
+      return {
+        watchNotes: (fn) => watch('notes', fn),
+        watchReview: (fn) => watch('review', fn),
+        watchSenders: (fn) => watch('senders', fn),
+        async submit(n, safe) {
+          if (safe) {
+            edit('notes', (o) => { o[n.id] = publicShape(n); });
+            edit('senders', (o) => { o[n.id] = senderShape(n); });
+          } else {
+            edit('review', (o) => { o[n.id] = reviewShape(n); });
+          }
+        },
+        async setRecipientHidden(id, v) { edit('notes', (o) => { if (o[id]) o[id].recipientHidden = !!v; }); },
+        async setAdminHidden(id, v) { edit('notes', (o) => { if (o[id]) o[id].adminHidden = !!v; }); },
+        async approve(n) {
+          edit('notes', (o) => { o[n.id] = publicShape(n); });
+          edit('senders', (o) => { o[n.id] = senderShape(n); });
+          edit('review', (o) => { delete o[n.id]; });
+        },
+        async deleteNote(id) {
+          edit('notes', (o) => { delete o[id]; });
+          edit('senders', (o) => { delete o[id]; });
+        },
+        async deleteReview(id) { edit('review', (o) => { delete o[id]; }); },
+        async clearAll() { write('notes', {}); write('review', {}); write('senders', {}); },
+        watchAdmin(fn) { listeners.admin.add(fn); fn(isAdmin() ? { email: 'Test mode' } : null); return () => listeners.admin.delete(fn); },
+        async adminSignIn(_email, passcode) {
+          if (String(passcode).trim() !== CONFIG.TEST_MODE_PASSCODE) throw new Error('That passcode is incorrect.');
+          try { sessionStorage.setItem(SS_ADMIN, '1'); } catch (e) {}
+          emitAdmin();
+        },
+        async adminSignOut() { try { sessionStorage.removeItem(SS_ADMIN); } catch (e) {} emitAdmin(); },
+      };
+    }
+
+    // ---- Live mode: Firebase Realtime Database + Firebase Authentication ----
+    function makeFirebaseBackend() {
+      if (!window.firebase || !firebase.database || !firebase.auth) throw new Error('Firebase scripts did not load');
+      if (!firebase.apps.length) firebase.initializeApp(CONFIG.FIREBASE);
+      const db = firebase.database();
+      const auth = firebase.auth();
+
+      const watch = (path, fn, onErr) => {
+        const ref = db.ref(path);
+        const handler = ref.on('value', (snap) => fn(snap.val() || {}), (e) => onErr && onErr(e));
+        return () => ref.off('value', handler);
+      };
+      const isAdminUid = async (uid) => (await db.ref('admins/' + uid).once('value')).val() === true;
+
+      return {
+        watchNotes: (fn, onErr) => watch('notes', fn, onErr),
+        watchReview: (fn, onErr) => watch('review', fn, onErr),
+        watchSenders: (fn, onErr) => watch('senders', fn, onErr),
+        submit(n, safe) {
+          if (safe) return db.ref().update({ ['notes/' + n.id]: publicShape(n), ['senders/' + n.id]: senderShape(n) });
+          return db.ref('review/' + n.id).set(reviewShape(n));
+        },
+        setRecipientHidden: (id, v) => db.ref(`notes/${id}/recipientHidden`).set(!!v),
+        setAdminHidden: (id, v) => db.ref(`notes/${id}/adminHidden`).set(!!v),
+        approve: (n) => db.ref().update({
+          ['notes/' + n.id]: publicShape(n), ['senders/' + n.id]: senderShape(n), ['review/' + n.id]: null,
+        }),
+        deleteNote: (id) => db.ref().update({ ['notes/' + id]: null, ['senders/' + id]: null }),
+        deleteReview: (id) => db.ref('review/' + id).remove(),
+        clearAll: () => db.ref().update({ notes: null, review: null, senders: null }),
+        watchAdmin(fn) {
+          return auth.onAuthStateChanged(async (u) => {
+            if (!u) return fn(null);
+            try { fn((await isAdminUid(u.uid)) ? { email: u.email } : null); }
+            catch (e) { fn(null); }
+          });
+        },
+        async adminSignIn(email, password) {
+          const cred = await auth.signInWithEmailAndPassword(email, password);
+          let ok = false;
+          try { ok = await isAdminUid(cred.user.uid); } catch (e) { ok = false; }
+          if (!ok) {
+            await auth.signOut();
+            throw new Error(`This account isn't on the teacher list yet. In Firebase, add its User UID (${cred.user.uid}) under "admins".`);
+          }
+        },
+        adminSignOut: () => auth.signOut(),
+      };
+    }
+
+    let Backend = null;
+    let BACKEND_ERROR = '';
+    if (LIVE) {
+      try { Backend = makeFirebaseBackend(); }
+      catch (e) { BACKEND_ERROR = "Couldn't connect to the notes database. Check your internet connection and refresh the page."; }
+    } else {
+      Backend = makeLocalBackend();
+    }
+
+    function useNotes() {
+      const [notes, setNotes] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState('');
+      useEffect(() => {
+        let got = false;
+        const timer = setTimeout(() => {
+          if (!got) { setError("Can't reach the notes database. Check your internet connection."); setLoading(false); }
+        }, 10000);
+        const off = Backend.watchNotes(
+          (map) => { got = true; clearTimeout(timer); setNotes(toList(map)); setLoading(false); setError(''); },
+          (e) => { got = true; clearTimeout(timer); setError(friendlyError(e)); setLoading(false); });
+        return () => { clearTimeout(timer); off(); };
+      }, []);
+      return { notes, loading, error };
+    }
+
+    function useSeen(user) {
+      const key = user ? 'ss-portal:seen:' + normKey(user.email || user.name) : null;
+      const [seen, setSeen] = useState(() => (key ? safeLS.get(key, []) : []));
+      useEffect(() => { setSeen(key ? safeLS.get(key, []) : []); }, [key]);
+      const markSeen = useCallback((ids) => {
+        if (!key || !ids.length) return;
+        setSeen((prev) => {
+          if (ids.every((id) => prev.includes(id))) return prev;
+          const next = Array.from(new Set([...prev, ...ids])).slice(-1000);
+          safeLS.set(key, next);
+          return next;
+        });
+      }, [key]);
+      return [seen, markSeen];
+    }
+
+    /* =====================================================================
+       5. SHARED UI PIECES
+       ===================================================================== */
+    const inputCls = 'w-full rounded-xl border-2 border-frost-300 bg-white px-4 py-3 text-pine-900 placeholder:text-pine-700/40 focus:border-pine-600 focus:outline-none focus:ring-4 focus:ring-pine-600/15 transition';
+    const btnPrimary = 'inline-flex items-center justify-center gap-2 rounded-xl bg-berry-600 px-5 py-3 font-extrabold text-white shadow-[0_4px_0_#8f1d24] hover:bg-berry-500 active:translate-y-[2px] active:shadow-[0_2px_0_#8f1d24] disabled:opacity-60 disabled:cursor-not-allowed transition';
+    const btnQuiet = 'inline-flex items-center justify-center gap-2 rounded-xl border-2 border-frost-300 bg-white px-4 py-2.5 font-bold text-pine-800 hover:border-pine-600 transition';
+
+    function Snowfall() {
+      const flakes = useMemo(() => Array.from({ length: 36 }, (_, i) => ({
+        id: i,
+        left: Math.random() * 100,
+        size: 6 + Math.random() * 10,
+        duration: 9 + Math.random() * 14,
+        delay: -Math.random() * 20,
+        drift: (Math.random() * 80 - 40) + 'px',
+        opacity: 0.25 + Math.random() * 0.55,
+      })), []);
+      return (
+        <div className="snow" aria-hidden="true">
+          {flakes.map((f) => (
+            <span key={f.id} className="flake" style={{
+              left: f.left + '%', fontSize: f.size + 'px', opacity: f.opacity,
+              animationDuration: f.duration + 's', animationDelay: f.delay + 's', '--drift': f.drift,
+            }}>❄</span>
+          ))}
+        </div>
+      );
+    }
+
+    function Panel({ children, className = '' }) {
+      return (
+        <div className={`relative overflow-hidden rounded-3xl bg-frost text-pine-900 shadow-card ${className}`}>
+          <div className="airmail" />
+          <div className="p-5 sm:p-8">{children}</div>
+        </div>
+      );
+    }
+
+    function Modal({ children, onClose, labelledBy }) {
+      useEffect(() => {
+        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+      }, [onClose]);
+      return (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-pine-950/75 p-4 backdrop-blur-sm sm:items-center fade-in"
+             onClick={onClose} role="dialog" aria-modal="true" aria-labelledby={labelledBy}>
+          <div className="w-full max-w-md overflow-hidden rounded-3xl bg-frost text-pine-900 shadow-card" onClick={(e) => e.stopPropagation()}>
+            <div className="airmail" />
+            <div className="max-h-[80vh] overflow-y-auto p-6 sm:p-7">{children}</div>
+          </div>
+        </div>
+      );
+    }
+
+    function Toast({ toast }) {
+      if (!toast) return null;
+      const color = toast.kind === 'error' ? 'bg-berry-600' : toast.kind === 'info' ? 'bg-pine-700' : 'bg-pine-600';
+      return (
+        <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[60] flex justify-center px-4" style={{ bottom: 'calc(16px + env(safe-area-inset-bottom, 0px))' }}>
+          <div key={toast.id} role="status" className={`fade-in pointer-events-auto rounded-2xl ${color} px-5 py-3 font-bold text-white shadow-card`}>
+            {toast.text}
+          </div>
+        </div>
+      );
+    }
+
+    function Stamp({ treat, className = '' }) {
+      return (
+        <div className={`stamp ${className}`} title={treat.label}>
+          <div className={`stamp-inner ${treat.id === 'candycane' ? 'stamp-cane' : 'stamp-choc'}`}>
+            <span className="stamp-emoji" aria-hidden="true">{treat.emoji}</span>
+            <span className="stamp-label">{treat.stampText}</span>
+          </div>
+        </div>
+      );
+    }
+
+    function Postcard({ msg, publicView = false, isNew = false, tilt = 0, footer = null }) {
+      const treat = TREATS[msg.treat] || TREATS.chocolate;
+      const from = msg.anonymous ? 'Your Secret Santa 🎅' : msg.senderName;
+      const to = publicView ? publicName(msg.recipient) : msg.recipient;
+      return (
+        <article className="relative rounded-2xl bg-frost p-5 text-pine-900 shadow-card"
+                 style={tilt ? { transform: `rotate(${tilt}deg)` } : undefined}>
+          <Stamp treat={treat} className="absolute right-4 top-4 rotate-3" />
+          <div className="postmark hidden sm:flex" aria-hidden="true">North Pole<br />{postmarkDate(msg.createdAt)}</div>
+          <div className="pr-24 sm:pr-40">
+            {isNew && <span className="mb-2 inline-block rounded-full bg-gold-400 px-2.5 py-0.5 text-xs font-extrabold text-pine-900">New</span>}
+            <div className="text-sm text-pine-700/70">To</div>
+            <div className="font-display text-xl font-semibold leading-tight break-words">{to}</div>
+            <div className="mt-1 text-sm font-bold text-pine-700/80">with a {treat.label.toLowerCase()} {treat.emoji}</div>
+          </div>
+          <p className="mt-4 min-h-[3rem] whitespace-pre-wrap break-words font-hand text-[1.6rem] leading-snug text-pine-900">{msg.text}</p>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t-2 border-dashed border-frost-300 pt-3 text-sm">
+            <span>From <b className="font-extrabold">{from}</b></span>
+            <span className="text-xs text-pine-700/70">{prettyDate(msg.createdAt)}</span>
+          </div>
+          {footer}
+        </article>
+      );
+    }
+
+    /* =====================================================================
+       6. QR CODE
+       ===================================================================== */
+    function QRCard({ compact = false }) {
+      const [url, setUrl] = useState(appBaseUrl());
+      const [imgError, setImgError] = useState(false);
+      const target = (url.trim() || appBaseUrl()).split('#')[0] + '#inbox';
+      const isLocalFile = window.location.protocol === 'file:' && !CONFIG.PUBLIC_APP_URL;
+      const src = (size) => `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=10&color=0c2a20&data=${encodeURIComponent(target)}`;
+
+      useEffect(() => { setImgError(false); }, [target]);
+
+      return (
+        <div className={compact ? '' : 'rounded-2xl border-2 border-dashed border-frost-300 bg-white p-5'}>
+          <div className="flex flex-col items-center text-center">
+            <h3 className="font-display text-xl font-semibold">Check your inbox on your phone</h3>
+            <p className="mt-1 max-w-xs text-sm text-pine-700/80">Scan with your camera to open My Inbox.</p>
+            <div className="mt-4 grid h-[200px] w-[200px] place-items-center rounded-2xl bg-frost-50 ring-2 ring-frost-300">
+              {imgError ? (
+                <p className="p-4 text-sm text-pine-700">The QR service didn't load. Check your connection and try again.</p>
+              ) : (
+                <img src={src(240)} width="180" height="180" alt={`QR code linking to ${target}`} className="rounded-lg" onError={() => setImgError(true)} />
+              )}
+            </div>
+            <p className="mt-3 max-w-full break-all text-xs text-pine-700/70">{target}</p>
+            {isLocalFile && (
+              <p className="mt-2 rounded-lg bg-gold-200 px-3 py-2 text-xs font-semibold text-pine-900">
+                You opened this file from your computer, so phones can't reach this address. Paste your GitHub Pages link below.
+              </p>
+            )}
+            <label className="mt-3 w-full text-left text-xs font-bold text-pine-700">
+              Page address for the QR code
+              <input className={`${inputCls} mt-1 py-2 text-sm`} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://yourname.github.io/secret-santa/" />
+            </label>
+            <a href={src(800)} target="_blank" rel="noopener noreferrer" className="mt-3 text-sm font-bold text-berry-600 underline underline-offset-4">
+              Open a large version to print
+            </a>
+          </div>
+        </div>
+      );
+    }
+
+    /* =====================================================================
+       7. LOGIN
+       ===================================================================== */
+    function LoginCard({ onLogin, reason }) {
+      const [name, setName] = useState('');
+      const [err, setErr] = useState('');
+
+      function submit(e) {
+        e.preventDefault();
+        setErr('');
+        const n = name.trim().replace(/\s+/g, ' ').slice(0, 60);
+        if (n.length < 2 || !n.includes(' ')) return setErr('Enter your first and last name, like Alex Lee.');
+        onLogin({ email: '', name: n, method: 'name' });
+      }
+
+      return (
+        <Panel className="mx-auto max-w-lg fade-in">
+          <div className="text-center">
+            <div className="text-5xl" aria-hidden="true">🎅</div>
+            <h2 className="mt-2 font-display text-3xl font-extrabold">Sign in to the North Pole Post</h2>
+            <p className="mt-2 text-pine-700/80">{reason || 'Sign in to send notes and open your inbox.'}</p>
+          </div>
+
+          <form onSubmit={submit} className="mt-6 space-y-4" noValidate>
+            <div>
+              <label htmlFor="login-name" className="mb-1.5 block text-sm font-extrabold">Your full name</label>
+              <input id="login-name" type="text" autoComplete="name" className={inputCls} maxLength={60}
+                     value={name} onChange={(e) => setName(e.target.value)} placeholder="Alex Lee" />
+              <p className="mt-1.5 text-xs text-pine-700/70">Use the same full name your classmates will type, so their notes reach you.</p>
+            </div>
+            {err && <p className="rounded-lg bg-berry-100 px-3 py-2 text-sm font-bold text-berry-700" role="alert">{err}</p>}
+            <button type="submit" className={`${btnPrimary} w-full`}>Sign in</button>
+          </form>
+        </Panel>
+      );
+    }
+
+    /* =====================================================================
+       8. SEND A NOTE
+       ===================================================================== */
+    function SendForm({ user, onSend }) {
+      const [recipient, setRecipient] = useState('');
+      const [treat, setTreat] = useState('chocolate');
+      const [text, setText] = useState('');
+      const [anonymous, setAnonymous] = useState(true);
+      const [isPublic, setIsPublic] = useState(false);
+      const [err, setErr] = useState('');
+      const [blocked, setBlocked] = useState(null);
+      const [sent, setSent] = useState(null);
+      const [sending, setSending] = useState(false);
+
+      const senderName = (user.name || user.email.split('@')[0]).slice(0, 60);
+      const myKeys = [user.email, user.name].filter(Boolean).map(normKey);
+      const closeBlocked = useCallback(() => setBlocked(null), []);
+
+      const draft = {
+        id: 'preview', createdAt: Date.now(), recipient: recipient.trim() || 'Your classmate', treat,
+        text: text.trim() || 'Your note will appear here…', anonymous, senderName,
+      };
+
+      async function submit(e) {
+        e.preventDefault();
+        setErr('');
+        const to = recipient.trim().replace(/\s+/g, ' ');
+        const body = text.trim();
+        if (to.length < 2) return setErr("Enter your classmate's first and last name.");
+        if (myKeys.includes(normKey(to))) return setErr("That's you! Pick a classmate to surprise.");
+        if (!TREATS[treat]) return setErr('Choose a Chocolate Bar or a Candy Cane.');
+        if (body.length < 2) return setErr('Write a short holiday note.');
+        if (body.length > CONFIG.MAX_MESSAGE_LENGTH) return setErr(`Keep your note under ${CONFIG.MAX_MESSAGE_LENGTH} characters.`);
+
+        const last = Number(safeLS.get(LS_LAST_SENT, 0)) || 0;
+        const wait = CONFIG.SEND_COOLDOWN_SECONDS - Math.floor((Date.now() - last) / 1000);
+        if (wait > 0) return setErr(`Easy there, elf. You can send another note in ${wait} seconds.`);
+
+        // Safety check covers the note AND the recipient field
+        const result = SafetyGuard.check(body + '\n' + to);
+        const msg = {
+          id: uid(),
+          createdAt: Date.now(),
+          recipient: to,
+          recipientKey: normKey(to),
+          treat,
+          text: body,
+          anonymous,
+          senderName,
+          senderEmail: user.email || '',
+          senderMethod: user.method,
+          senderPublic: isPublic,
+          recipientHidden: false,
+          adminHidden: false,
+          status: result.safe ? 'approved' : 'flagged',
+          flags: result.flags,
+          reviewedAt: null,
+        };
+
+        setSending(true);
+        const ok = await onSend(msg, result.safe);
+        setSending(false);
+        if (!ok) return;
+        safeLS.set(LS_LAST_SENT, Date.now());
+
+        if (!result.safe) {
+          setBlocked(result.categories);   // keep the text so the student can revise it
+        } else {
+          setSent(msg);
+          setRecipient(''); setText(''); setIsPublic(false); setAnonymous(true); setTreat('chocolate');
+        }
+      }
+
+      if (sent) {
+        const t = TREATS[sent.treat];
+        return (
+          <Panel className="mx-auto max-w-xl text-center fade-in">
+            <div className="text-6xl" aria-hidden="true">{t.emoji}</div>
+            <h2 className="mt-3 font-display text-3xl font-extrabold">Delivered to {sent.recipient}</h2>
+            <p className="mt-2 text-pine-700/80">
+              Your {t.label.toLowerCase()} and note are waiting in their inbox{sent.anonymous ? ', signed by a Secret Santa' : ''}.
+              {sent.senderPublic ? ' It will also appear on the Bulletin Board.' : ''}
+            </p>
+            <button className={`${btnPrimary} mt-6`} onClick={() => setSent(null)}>Send another note</button>
+          </Panel>
+        );
+      }
+
+      const charsLeft = CONFIG.MAX_MESSAGE_LENGTH - text.length;
+
+      return (
+        <div className="grid gap-6 lg:grid-cols-[1.15fr_.85fr] fade-in">
+          <Panel>
+            <h2 className="font-display text-3xl font-extrabold">Send a treat and a note</h2>
+            <p className="mt-1 text-pine-700/80">Signed in as <b>{senderName}</b>{user.email ? ` (${user.email})` : ''}.</p>
+
+            <form onSubmit={submit} className="mt-6 space-y-6" noValidate>
+              <div>
+                <label htmlFor="to" className="mb-1.5 block text-sm font-extrabold">Who is it for?</label>
+                <input id="to" className={inputCls} value={recipient} maxLength={80} autoComplete="off"
+                       onChange={(e) => setRecipient(e.target.value)} placeholder="Classmate's first and last name" />
+                <p className="mt-1.5 text-xs text-pine-700/70">Type their first and last name exactly, so it lands in the right inbox.</p>
+              </div>
+
+              <fieldset>
+                <legend className="mb-2 text-sm font-extrabold">Pick a treat</legend>
+                <div className="grid grid-cols-2 gap-3">
+                  {Object.values(TREATS).map((t) => (
+                    <label key={t.id} className={`flex cursor-pointer items-center gap-3 rounded-2xl border-2 bg-white p-3 transition ${treat === t.id ? 'border-berry-600 ring-4 ring-berry-600/15' : 'border-frost-300 hover:border-pine-600'}`}>
+                      <input type="radio" name="treat" value={t.id} checked={treat === t.id} onChange={() => setTreat(t.id)} className="sr-only" />
+                      <span className="text-3xl" aria-hidden="true">{t.emoji}</span>
+                      <span className="font-extrabold leading-tight">{t.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              <div>
+                <div className="mb-1.5 flex items-end justify-between">
+                  <label htmlFor="note" className="block text-sm font-extrabold">Your holiday note</label>
+                  <span className={`text-xs font-bold ${charsLeft < 40 ? 'text-berry-600' : 'text-pine-700/60'}`}>{charsLeft} left</span>
+                </div>
+                <textarea id="note" rows="5" className={`${inputCls} resize-y`} value={text} maxLength={CONFIG.MAX_MESSAGE_LENGTH}
+                          onChange={(e) => setText(e.target.value)} placeholder="Happy holidays! Thanks for always saving me a seat at lunch." />
+              </div>
+
+              <fieldset>
+                <legend className="mb-2 text-sm font-extrabold">How should it be signed?</legend>
+                <div className="grid gap-2 sm:grid-cols-2" role="radiogroup">
+                  {[
+                    { v: true, label: 'Send Anonymously (Secret Santa 🎅)' },
+                    { v: false, label: 'Send with My Name Visible 🏷️' },
+                  ].map((o) => (
+                    <button key={String(o.v)} type="button" role="radio" aria-checked={anonymous === o.v} onClick={() => setAnonymous(o.v)}
+                            className={`rounded-2xl border-2 px-4 py-3 text-left text-sm font-extrabold transition ${anonymous === o.v ? 'border-pine-700 bg-pine-700 text-frost' : 'border-frost-300 bg-white text-pine-800 hover:border-pine-600'}`}>
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+                {anonymous && <p className="mt-1.5 text-xs text-pine-700/70">Your classmate won't see your name. Teachers can see who sent a note if it's flagged for review.</p>}
+              </fieldset>
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-2xl border-2 border-frost-300 bg-white p-4 hover:border-pine-600">
+                <input type="checkbox" checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)}
+                       className="mt-0.5 h-5 w-5 shrink-0 accent-[#b3262e]" />
+                <span>
+                  <span className="block font-extrabold">Display this message on the public Holiday Bulletin Board?</span>
+                  <span className="mt-0.5 block text-xs text-pine-700/70">Everyone can read it there. Your classmate can still choose to take it down.</span>
+                </span>
+              </label>
+
+              {err && <p className="rounded-lg bg-berry-100 px-3 py-2 text-sm font-bold text-berry-700" role="alert">{err}</p>}
+
+              <button type="submit" className={`${btnPrimary} w-full text-lg`} disabled={sending}>
+                {sending ? 'Sending…' : `Send ${TREATS[treat].emoji} and note`}
+              </button>
+            </form>
+          </Panel>
+
+          <aside className="space-y-3 lg:sticky lg:top-6 lg:self-start">
+            <p className="px-1 text-sm font-bold text-frost/70">Preview</p>
+            <Postcard msg={draft} />
+          </aside>
+
+          {blocked && (
+            <Modal onClose={closeBlocked} labelledBy="blocked-title">
+              <div className="text-center">
+                <div className="text-5xl" aria-hidden="true">🎅✋</div>
+                <h3 id="blocked-title" className="mt-2 font-display text-2xl font-extrabold">Ho Ho Hold on!</h3>
+                <p className="mt-2 font-bold text-berry-700">Ho Ho Hold on! Your message contains restricted words or safety violations. Please revise.</p>
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  {blocked.map((c) => (
+                    <span key={c} className="rounded-full bg-berry-100 px-3 py-1 text-xs font-extrabold text-berry-700">{c}</span>
+                  ))}
+                </div>
+                <p className="mt-4 text-sm text-pine-700/80">
+                  This note was not delivered. A copy went to a teacher for review, and it will only be delivered if a teacher approves it.
+                </p>
+                {blocked.includes(CAT.SELFHARM) && (
+                  <p className="mt-3 rounded-xl bg-gold-200 px-4 py-3 text-sm font-semibold text-pine-900">
+                    If you or someone you know is going through a hard time, please talk to a teacher, school counselor, or another adult you trust.
+                  </p>
+                )}
+                <button className={`${btnPrimary} mt-6 w-full`} onClick={closeBlocked}>Revise my note</button>
+              </div>
+            </Modal>
+          )}
+        </div>
+      );
+    }
+
+    /* =====================================================================
+       9. MY INBOX
+       ===================================================================== */
+    function Inbox({ user, messages, seen, markSeen, onToggleHidden }) {
+      const [seenAtOpen] = useState(() => new Set(seen));
+      useEffect(() => { markSeen(messages.map((m) => m.id)); }, [messages, markSeen]);
+
+      const counts = messages.reduce((acc, m) => { acc[m.treat] = (acc[m.treat] || 0) + 1; return acc; }, {});
+      const who = user.name || user.email;
+
+      return (
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px] fade-in">
+          <section>
+            <div className="mb-5">
+              <h2 className="font-display text-3xl font-extrabold text-frost sm:text-4xl">{who}'s inbox</h2>
+              <p className="mt-1 text-frost/75">
+                {messages.length === 0 ? 'Nothing here yet.' :
+                  `${messages.length} note${messages.length === 1 ? '' : 's'}: ${counts.chocolate || 0} 🍫 and ${counts.candycane || 0} 🍬`}
+              </p>
+            </div>
+
+            {messages.length === 0 ? (
+              <Panel>
+                <div className="py-6 text-center">
+                  <div className="text-5xl" aria-hidden="true">📭</div>
+                  <h3 className="mt-3 font-display text-2xl font-semibold">Your mailbox is waiting</h3>
+                  <p className="mx-auto mt-2 max-w-sm text-pine-700/80">
+                    Notes sent to {[user.name, user.email].filter(Boolean).join(' or ')} will show up here. Why not start the cheer and send one yourself?
+                  </p>
+                  {!LIVE && (
+                    <p className="mx-auto mt-4 max-w-sm rounded-xl bg-gold-200 px-4 py-3 text-xs font-semibold">
+                      This site is in single-device mode, so you'll only see notes sent from this browser.
+                    </p>
+                  )}
+                  <a href="#send" className={`${btnPrimary} mt-5`}>Send a note</a>
+                </div>
+              </Panel>
+            ) : (
+              <div className="space-y-5">
+                {messages.map((m) => (
+                  <Postcard key={m.id} msg={m} isNew={!seenAtOpen.has(m.id)}
+                    footer={m.senderPublic ? (
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white px-3 py-2 text-xs">
+                        <span className="font-semibold text-pine-700">
+                          {m.recipientHidden ? 'Hidden from the Bulletin Board' : 'Showing on the Bulletin Board'}
+                        </span>
+                        <button className="font-extrabold text-berry-600 underline underline-offset-4" onClick={() => onToggleHidden(m)}>
+                          {m.recipientHidden ? 'Show it there' : 'Take it down'}
+                        </button>
+                      </div>
+                    ) : null}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+          <aside className="lg:sticky lg:top-6 lg:self-start">
+            <div className="rounded-3xl bg-frost p-1 text-pine-900 shadow-card"><QRCard /></div>
+          </aside>
+        </div>
+      );
+    }
+
+    /* =====================================================================
+       10. PUBLIC BULLETIN BOARD
+       ===================================================================== */
+    const TILTS = [-1.2, 0.9, -0.4, 1.3, -0.9, 0.5];
+
+    function Bulletin({ messages, loading }) {
+      const [filter, setFilter] = useState('all');
+      const [q, setQ] = useState('');
+      const query = normKey(q);
+      const list = messages.filter((m) =>
+        (filter === 'all' || m.treat === filter) &&
+        (!query || normKey(m.text).includes(query) || normKey(publicName(m.recipient)).includes(query) || (!m.anonymous && normKey(m.senderName).includes(query))));
+      const choc = messages.filter((m) => m.treat === 'chocolate').length;
+      const cane = messages.filter((m) => m.treat === 'candycane').length;
+
+      return (
+        <section className="fade-in">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h2 className="font-display text-3xl font-extrabold text-frost sm:text-4xl">Holiday Bulletin Board</h2>
+              <p className="mt-1 text-frost/75">{messages.length} note{messages.length === 1 ? '' : 's'} shared with the school: {choc} 🍫 and {cane} 🍬</p>
+            </div>
+            <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+              <input className={`${inputCls} py-2 sm:w-56`} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search notes or names" aria-label="Search the board" />
+              <div className="flex gap-1 rounded-xl bg-pine-800 p-1">
+                {[['all', 'All'], ['chocolate', '🍫'], ['candycane', '🍬']].map(([id, label]) => (
+                  <button key={id} onClick={() => setFilter(id)} aria-pressed={filter === id}
+                          aria-label={id === 'all' ? 'Show all treats' : `Show ${TREATS[id].label} notes`}
+                          className={`rounded-lg px-3 py-1.5 text-sm font-extrabold transition ${filter === id ? 'bg-frost text-pine-900' : 'text-frost/80 hover:text-frost'}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="cork rounded-3xl p-4 sm:p-7">
+            {loading ? (
+              <p className="py-16 text-center font-bold text-pine-950/70">Pinning up notes…</p>
+            ) : list.length === 0 ? (
+              <div className="mx-auto max-w-sm rounded-2xl bg-frost p-6 text-center text-pine-900 shadow-card">
+                <div className="text-4xl" aria-hidden="true">📌</div>
+                <p className="mt-2 font-display text-xl font-semibold">{messages.length ? 'No notes match that search' : 'The board is empty'}</p>
+                <p className="mt-1 text-sm text-pine-700/80">
+                  {messages.length ? 'Try a different name or treat.' : 'Tick "Display this message on the public Holiday Bulletin Board?" when you send a note.'}
+                </p>
+              </div>
+            ) : (
+              <div className="columns-1 gap-6 md:columns-2 xl:columns-3">
+                {list.map((m, i) => (
+                  <div key={m.id} className="relative mb-7 break-inside-avoid pt-3">
+                    <span className="pin" aria-hidden="true">📌</span>
+                    <Postcard msg={m} publicView tilt={TILTS[i % TILTS.length]} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      );
+    }
+
+    /* =====================================================================
+       11. TEACHER / ADMIN DASHBOARD
+       ===================================================================== */
+    const CAT_STYLE = {
+      [CAT.PROFANITY]: 'bg-berry-100 text-berry-700',
+      [CAT.SLUR]: 'bg-berry-600 text-white',
+      [CAT.BULLY]: 'bg-gold-200 text-pine-900',
+      [CAT.THREAT]: 'bg-berry-700 text-white',
+      [CAT.SEXUAL]: 'bg-pink-100 text-pink-800',
+      [CAT.ILLEGAL]: 'bg-purple-100 text-purple-800',
+      [CAT.SELFHARM]: 'bg-blue-100 text-blue-900',
+    };
+
+    function FlagChips({ flags }) {
+      if (!flags || !flags.length) return null;
+      return (
+        <div className="flex flex-wrap gap-1.5">
+          {flags.map((f, i) => (
+            <span key={i} className={`rounded-full px-2.5 py-1 text-xs font-extrabold ${CAT_STYLE[f.category] || 'bg-frost-200'}`}>
+              {f.category}: “{f.term}”
+            </span>
+          ))}
+        </div>
+      );
+    }
+
+    function AdminMessageCard({ m, onApprove, onDelete, onToggleBoard }) {
+      const t = TREATS[m.treat] || TREATS.chocolate;
+      const selfHarm = (m.flags || []).some((f) => f.category === CAT.SELFHARM);
+      const onBoard = m.senderPublic && !m.recipientHidden && !m.adminHidden;
+      return (
+        <article className="rounded-2xl border-2 border-frost-300 bg-white p-4 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="text-sm leading-relaxed">
+              <div><span className="text-pine-700/70">From </span><b>{m.senderName}</b>{m.senderEmail ? <span className="text-pine-700/70"> ({m.senderEmail})</span> : <span className="text-pine-700/70"> (name sign-in)</span>}</div>
+              <div><span className="text-pine-700/70">To </span><b>{m.recipient}</b></div>
+              <div className="text-xs text-pine-700/70">
+                {t.emoji} {t.label}, {m.anonymous ? 'sent anonymously' : 'name visible'}, {m.senderPublic ? 'asked for Bulletin Board' : 'private'}, {prettyDate(m.createdAt)}
+              </div>
+            </div>
+            <span className={`rounded-full px-3 py-1 text-xs font-extrabold ${m.status === 'flagged' ? 'bg-berry-100 text-berry-700' : 'bg-pine-600/15 text-pine-700'}`}>
+              {m.status === 'flagged' ? 'Needs review' : 'Delivered'}
+            </span>
+          </div>
+
+          {selfHarm && (
+            <p className="mt-3 rounded-xl bg-blue-100 px-3 py-2 text-sm font-bold text-blue-900">
+              This note may contain self-harm language. Please follow your school's safeguarding procedure and check in with the sender.
+            </p>
+          )}
+
+          <p className="mt-3 whitespace-pre-wrap break-words rounded-xl bg-frost-50 p-3 text-pine-900">{m.text}</p>
+          {m.flags && m.flags.length > 0 && <div className="mt-3"><FlagChips flags={m.flags} /></div>}
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {m.status === 'flagged' && (
+              <button className="inline-flex items-center gap-2 rounded-xl bg-pine-600 px-4 py-2.5 font-extrabold text-white hover:bg-pine-500" onClick={() => onApprove(m)}>
+                Approve and deliver
+              </button>
+            )}
+            {m.status === 'approved' && m.senderPublic && (
+              <button className={btnQuiet} onClick={() => onToggleBoard(m)}>
+                {m.adminHidden ? 'Show on Bulletin Board' : onBoard ? 'Remove from Bulletin Board' : 'Hidden by recipient'}
+              </button>
+            )}
+            <button className="inline-flex items-center gap-2 rounded-xl border-2 border-berry-600 px-4 py-2.5 font-extrabold text-berry-600 hover:bg-berry-600 hover:text-white" onClick={() => onDelete(m)}>
+              Delete
+            </button>
+          </div>
+        </article>
+      );
+    }
+
+    function AdminPanel({ notes, notify }) {
+      const [admin, setAdmin] = useState(undefined); // undefined = still checking
+      const [email, setEmail] = useState('');
+      const [password, setPassword] = useState('');
+      const [err, setErr] = useState('');
+      const [busy, setBusy] = useState(false);
+      const [view, setView] = useState('queue');
+      const [q, setQ] = useState('');
+      const [status, setStatus] = useState('all');
+      const [review, setReview] = useState({});
+      const [senders, setSenders] = useState({});
+
+      useEffect(() => Backend.watchAdmin(setAdmin), []);
+      useEffect(() => {
+        if (!admin) { setReview({}); setSenders({}); return; }
+        const onErr = (e) => notify(friendlyError(e), 'error');
+        const offReview = Backend.watchReview(setReview, onErr);
+        const offSenders = Backend.watchSenders(setSenders, onErr);
+        return () => { offReview(); offSenders(); };
+      }, [admin, notify]);
+
+      if (admin === undefined) {
+        return <p className="py-16 text-center font-bold text-frost/70">Checking teacher sign-in…</p>;
+      }
+
+      if (!admin) {
+        const signIn = async (e) => {
+          e.preventDefault();
+          setErr(''); setBusy(true);
+          try { await Backend.adminSignIn(email.trim(), password); setPassword(''); }
+          catch (e2) { setErr(friendlyError(e2)); }
+          finally { setBusy(false); }
+        };
+        return (
+          <Panel className="mx-auto max-w-md fade-in">
+            <div className="text-center">
+              <div className="text-5xl" aria-hidden="true">🔐</div>
+              <h2 className="mt-2 font-display text-3xl font-extrabold">Teacher dashboard</h2>
+              <p className="mt-1 text-pine-700/80">
+                {LIVE ? 'Sign in with your teacher account to review flagged notes.' : 'Test mode: enter the passcode to review flagged notes.'}
+              </p>
+            </div>
+            <form onSubmit={signIn} className="mt-6 space-y-4" noValidate>
+              {LIVE && (
+                <div>
+                  <label htmlFor="t-email" className="mb-1.5 block text-sm font-extrabold">Teacher email</label>
+                  <input id="t-email" type="email" autoComplete="username" className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="teacher@school.edu" />
+                </div>
+              )}
+              <div>
+                <label htmlFor="t-pass" className="mb-1.5 block text-sm font-extrabold">{LIVE ? 'Password' : 'Passcode'}</label>
+                <input id="t-pass" type="password" autoComplete="current-password" className={inputCls} value={password} onChange={(e) => setPassword(e.target.value)} />
+              </div>
+              {err && <p className="rounded-lg bg-berry-100 px-3 py-2 text-sm font-bold text-berry-700" role="alert">{err}</p>}
+              <button type="submit" className={`${btnPrimary} w-full`} disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
+            </form>
+          </Panel>
+        );
+      }
+
+      const flagged = toList(review).map((m) => ({ ...m, status: 'flagged' }));
+      const delivered = notes.map((n) => ({ ...n, ...(senders[n.id] || {}), status: 'approved' }));
+      const onBoard = notes.filter((m) => m.senderPublic && !m.recipientHidden && !m.adminHidden);
+
+      const act = async (fn, okMsg, kind = 'success') => {
+        try { await fn(); if (okMsg) notify(okMsg, kind); }
+        catch (e) { notify(friendlyError(e), 'error'); }
+      };
+      const approve = (m) => act(() => Backend.approve(m), `Approved and delivered to ${m.recipient}`);
+      const del = (m) => {
+        if (!window.confirm(`Delete this note to ${m.recipient}? This can't be undone.`)) return;
+        act(() => (m.status === 'flagged' ? Backend.deleteReview(m.id) : Backend.deleteNote(m.id)), 'Note deleted', 'info');
+      };
+      const toggleBoard = (m) => {
+        if (!m.adminHidden && m.recipientHidden) return;
+        act(() => Backend.setAdminHidden(m.id, !m.adminHidden), m.adminHidden ? 'Back on the Bulletin Board' : 'Removed from the Bulletin Board', 'info');
+      };
+      function exportJson() {
+        const data = { exportedAt: new Date().toISOString(), delivered, flagged };
+        const href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+        const a = document.createElement('a');
+        a.href = href;
+        a.download = `secret-santa-notes-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(href), 1500);
+      }
+      function resetAll() {
+        const typed = window.prompt('This permanently deletes ALL notes for everyone. Type DELETE to confirm.');
+        if (typed !== 'DELETE') return;
+        act(() => Backend.clearAll(), 'All notes deleted', 'info');
+      }
+
+      const query = normKey(q);
+      const everything = [...flagged, ...delivered].sort(byNewest);
+      const all = everything.filter((m) =>
+        (status === 'all' || m.status === status) &&
+        (!query || [m.text, m.recipient, m.senderName, m.senderEmail].some((s) => normKey(s).includes(query))));
+
+      const stats = [
+        { label: 'Need review', value: flagged.length, tone: 'text-berry-600' },
+        { label: 'Delivered', value: delivered.length, tone: 'text-pine-700' },
+        { label: 'On the board', value: onBoard.length, tone: 'text-pine-700' },
+        { label: 'Total notes', value: everything.length, tone: 'text-pine-700' },
+      ];
+
+      return (
+        <div className="fade-in space-y-6">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="font-display text-3xl font-extrabold text-frost sm:text-4xl">Teacher dashboard</h2>
+              <p className="mt-1 text-frost/75">Signed in as {admin.email}. New flagged notes appear here instantly.</p>
+            </div>
+            <button className="rounded-xl bg-pine-800 px-4 py-2 font-bold text-frost hover:bg-pine-700" onClick={() => act(() => Backend.adminSignOut(), 'Signed out of the dashboard', 'info')}>
+              Sign out
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {stats.map((s) => (
+              <div key={s.label} className="rounded-2xl bg-frost p-4 text-pine-900 shadow-card">
+                <div className={`font-display text-3xl font-extrabold ${s.tone}`}>{s.value}</div>
+                <div className="text-sm font-bold text-pine-700/80">{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="no-scrollbar flex gap-1 overflow-x-auto rounded-xl bg-pine-800 p-1">
+            {[['queue', `Review queue (${flagged.length})`], ['all', 'All notes'], ['tools', 'Settings & data']].map(([id, label]) => (
+              <button key={id} onClick={() => setView(id)} aria-pressed={view === id}
+                      className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-extrabold transition ${view === id ? 'bg-frost text-pine-900' : 'text-frost/80 hover:text-frost'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {view === 'queue' && (
+            <Panel>
+              {flagged.length === 0 ? (
+                <div className="py-8 text-center">
+                  <div className="text-5xl" aria-hidden="true">✅</div>
+                  <p className="mt-2 font-display text-2xl font-semibold">Nothing to review</p>
+                  <p className="mt-1 text-pine-700/80">Flagged notes will appear here as soon as they're sent.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {flagged.map((m) => <AdminMessageCard key={m.id} m={m} onApprove={approve} onDelete={del} onToggleBoard={toggleBoard} />)}
+                </div>
+              )}
+            </Panel>
+          )}
+
+          {view === 'all' && (
+            <Panel>
+              <div className="mb-4 flex flex-wrap gap-2">
+                <input className={`${inputCls} py-2 sm:max-w-xs`} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search text, sender, or recipient" aria-label="Search notes" />
+                <select className={`${inputCls} w-auto py-2`} value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Filter by status">
+                  <option value="all">All statuses</option>
+                  <option value="flagged">Needs review</option>
+                  <option value="approved">Delivered</option>
+                </select>
+              </div>
+              {all.length === 0 ? (
+                <p className="py-6 text-center text-pine-700/80">No notes match.</p>
+              ) : (
+                <div className="space-y-4">
+                  {all.map((m) => <AdminMessageCard key={m.status + m.id} m={m} onApprove={approve} onDelete={del} onToggleBoard={toggleBoard} />)}
+                </div>
+              )}
+            </Panel>
+          )}
+
+          {view === 'tools' && (
+            <Panel>
+              <div className="space-y-6">
+                <section>
+                  <h3 className="font-display text-xl font-semibold">Where notes are saved</h3>
+                  <p className="mt-1 text-sm text-pine-700/80">
+                    {LIVE
+                      ? 'Live mode: notes are saved in your Firebase database and update instantly on every device.'
+                      : 'Test mode: notes are saved in this browser only. Paste your Firebase settings into CONFIG.FIREBASE at the top of the file to go live.'}
+                  </p>
+                </section>
+                <section>
+                  <h3 className="font-display text-xl font-semibold">How the safety filter works</h3>
+                  <p className="mt-1 text-sm text-pine-700/80">
+                    Every note is checked for profanity, slurs, bullying, threats, sexual content, drugs and other rule-breaking, including common
+                    disguises like “sh1t”, “f u c k” and “f**k”. Flagged notes wait here and are never shown to students unless you approve them.
+                    The filter can't catch everything and occasionally flags innocent notes, so please read flagged notes in full.
+                  </p>
+                </section>
+                <section>
+                  <h3 className="font-display text-xl font-semibold">Link for students</h3>
+                  <div className="mt-3"><QRCard /></div>
+                </section>
+                <section className="flex flex-wrap gap-2">
+                  <button className={btnQuiet} onClick={exportJson}>Download all notes (JSON)</button>
+                  <button className="inline-flex items-center gap-2 rounded-xl border-2 border-berry-600 px-4 py-2.5 font-extrabold text-berry-600 hover:bg-berry-600 hover:text-white" onClick={resetAll}>
+                    Delete all notes
+                  </button>
+                </section>
+              </div>
+            </Panel>
+          )}
+        </div>
+      );
+    }
+
+    /* =====================================================================
+       12. APP SHELL
+       ===================================================================== */
+    function App() {
+      const [toast, setToast] = useState(null);
+      const notify = useCallback((text, kind = 'success') => setToast({ text, kind, id: uid() }), []);
+      useEffect(() => {
+        if (!toast) return;
+        const t = setTimeout(() => setToast(null), 3800);
+        return () => clearTimeout(t);
+      }, [toast]);
+
+      const { notes, loading, error } = useNotes();
+      const [user, setUser] = useState(() => safeLS.get(LS_SESSION, null));
+      const [tab, setTab] = useState(tabFromHash);
+      const [qrOpen, setQrOpen] = useState(false);
+      const [seen, markSeen] = useSeen(user);
+      const closeQr = useCallback(() => setQrOpen(false), []);
+
+      useEffect(() => {
+        const onHash = () => { setTab(tabFromHash()); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+        window.addEventListener('hashchange', onHash);
+        return () => window.removeEventListener('hashchange', onHash);
+      }, []);
+
+      const go = (id) => { if (window.location.hash !== '#' + id) window.location.hash = id; else setTab(id); };
+
+      function login(u) {
+        setUser(u);
+        safeLS.set(LS_SESSION, u);
+        notify(`Welcome, ${u.name || u.email}!`);
+      }
+      function logout() {
+        setUser(null);
+        safeLS.del(LS_SESSION);
+        notify('Signed out', 'info');
+      }
+
+      const userKeys = useMemo(() => (user ? [user.email, user.name].filter(Boolean).map(normKey) : []), [user]);
+      const inbox = useMemo(
+        () => notes.filter((m) => userKeys.includes(m.recipientKey || normKey(m.recipient))),
+        [notes, userKeys]);
+      const board = useMemo(
+        () => notes.filter((m) => m.senderPublic && !m.recipientHidden && !m.adminHidden),
+        [notes]);
+      const unseen = inbox.filter((m) => !seen.includes(m.id)).length;
+
+      const sendNote = useCallback(async (note, safe) => {
+        try { await Backend.submit(note, safe); return true; }
+        catch (e) { notify(friendlyError(e), 'error'); return false; }
+      }, [notify]);
+
+      async function toggleHidden(m) {
+        try {
+          await Backend.setRecipientHidden(m.id, !m.recipientHidden);
+          notify(m.recipientHidden ? 'Back on the Bulletin Board' : 'Taken down from the Bulletin Board', 'info');
+        } catch (e) { notify(friendlyError(e), 'error'); }
+      }
+
+      return (
+        <div className="relative min-h-screen">
+          <Snowfall />
+          {!LIVE && (
+            <div className="relative z-20 bg-gold-400 px-4 py-2 text-center text-sm font-bold text-pine-900">
+              Test mode: notes are saved in this browser only. Add your Firebase settings at the top of the file to go live.
+            </div>
+          )}
+          <div className="relative z-10 mx-auto max-w-6xl px-4 pb-16 pt-5 sm:px-6">
+            <header className="flex flex-wrap items-center justify-between gap-4">
+              <a href="#send" className="flex items-center gap-3">
+                <span className="grid h-12 w-12 place-items-center rounded-2xl bg-berry-600 text-2xl shadow-[0_4px_0_#8f1d24]" aria-hidden="true">🎅</span>
+                <span>
+                  <span className="block font-display text-2xl font-extrabold leading-none text-frost">North Pole Post</span>
+                  <span className="block text-sm font-semibold text-frost/70">{CONFIG.SCHOOL_NAME} Secret Santa</span>
+                </span>
+              </a>
+              <div className="flex flex-wrap items-center gap-2">
+                <button onClick={() => setQrOpen(true)} className="rounded-xl bg-pine-800 px-3 py-2 text-sm font-bold text-frost hover:bg-pine-700">
+                  📱 Phone QR code
+                </button>
+                {user ? (
+                  <div className="flex items-center gap-2 rounded-xl bg-pine-800 py-1 pl-3 pr-1 text-sm">
+                    <span className="max-w-[160px] truncate font-bold text-frost" title={user.email || user.name}>{user.name || user.email}</span>
+                    <button onClick={logout} className="rounded-lg bg-pine-950/60 px-2.5 py-1.5 font-bold text-frost/80 hover:text-frost">Sign out</button>
+                  </div>
+                ) : null}
+              </div>
+            </header>
+
+            <nav className="no-scrollbar mt-6 flex gap-1 overflow-x-auto rounded-2xl bg-pine-900/80 p-1.5 ring-1 ring-white/10 backdrop-blur" aria-label="Sections">
+              {TABS.map((t) => (
+                <button key={t.id} onClick={() => go(t.id)} aria-current={tab === t.id ? 'page' : undefined}
+                        className={`relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-extrabold transition sm:text-base ${tab === t.id ? 'bg-frost text-pine-900 shadow' : 'text-frost/80 hover:bg-white/5 hover:text-frost'}`}>
+                  <span aria-hidden="true">{t.icon}</span>{t.label}
+                  {t.id === 'inbox' && user && unseen > 0 && (
+                    <span className="ml-1 grid h-5 min-w-[20px] place-items-center rounded-full bg-gold-400 px-1.5 text-xs font-extrabold text-pine-900" aria-label={`${unseen} new`}>{unseen}</span>
+                  )}
+                </button>
+              ))}
+            </nav>
+
+            {error && (
+              <div className="mt-4 rounded-2xl bg-berry-600 px-4 py-3 font-bold text-white" role="alert">{error}</div>
+            )}
+
+            <main className="mt-6">
+              {tab === 'send' && (user
+                ? <SendForm key={userKeys.join('|')} user={user} onSend={sendNote} />
+                : <LoginCard onLogin={login} reason="Sign in first so your note can be delivered." />)}
+
+              {tab === 'inbox' && (user
+                ? (loading ? <p className="py-16 text-center font-bold text-frost/70">Checking the mailbag…</p>
+                           : <Inbox key={userKeys.join('|')} user={user} messages={inbox} seen={seen} markSeen={markSeen} onToggleHidden={toggleHidden} />)
+                : <LoginCard onLogin={login} reason="Sign in with your name to open your inbox." />)}
+
+              {tab === 'board' && <Bulletin messages={board} loading={loading} />}
+
+              {tab === 'admin' && <AdminPanel notes={notes} notify={notify} />}
+            </main>
+
+            <footer className="mt-14 text-center text-sm text-frost/60">
+              <p>Be kind. Every note is checked for safety, and teachers review anything flagged.</p>
+            </footer>
+          </div>
+
+          {qrOpen && (
+            <Modal onClose={closeQr} labelledBy="qr-title">
+              <span id="qr-title" className="sr-only">Phone QR code</span>
+              <QRCard compact />
+              <button className={`${btnQuiet} mt-5 w-full`} onClick={closeQr}>Close</button>
+            </Modal>
+          )}
+          <Toast toast={toast} />
+        </div>
+      );
+    }
+
+    function FatalError({ message }) {
+      return (
+        <div className="grid min-h-screen place-items-center p-6">
+          <div className="max-w-md rounded-3xl bg-frost p-8 text-center text-pine-900 shadow-card">
+            <div className="text-5xl" aria-hidden="true">🎅</div>
+            <h1 className="mt-2 font-display text-2xl font-extrabold">The North Pole Post is offline</h1>
+            <p className="mt-2 text-pine-700/80">{message}</p>
+            <button className={`${btnPrimary} mt-5`} onClick={() => window.location.reload()}>Refresh the page</button>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(Backend ? <App /> : <FatalError message={BACKEND_ERROR} />);
+  </script>
+</body>
+</html>
