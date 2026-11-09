@@ -701,8 +701,9 @@
       function submit(e) {
         e.preventDefault();
         setErr('');
-        const n = name.trim().replace(/\s+/g, ' ').slice(0, 60);
-        if (n.length < 2 || !n.includes(' ')) return setErr('Enter your first and last name, like Alex Lee.');
+        const raw = name.trim().split(/\s+/)[0].slice(0, 40);
+        const n = raw.charAt(0).toUpperCase() + raw.slice(1);
+        if (n.length < 2) return setErr('Enter your first name, like Alex.');
         onLogin({ email: '', name: n, method: 'name' });
       }
 
@@ -716,10 +717,10 @@
 
           <form onSubmit={submit} className="mt-6 space-y-4" noValidate>
             <div>
-              <label htmlFor="login-name" className="mb-1.5 block text-sm font-extrabold">Your full name</label>
-              <input id="login-name" type="text" autoComplete="name" className={inputCls} maxLength={60}
-                     value={name} onChange={(e) => setName(e.target.value)} placeholder="Alex Lee" />
-              <p className="mt-1.5 text-xs text-pine-700/70">Use the same full name your classmates will type, so their notes reach you.</p>
+              <label htmlFor="login-name" className="mb-1.5 block text-sm font-extrabold">Your first name</label>
+              <input id="login-name" type="text" autoComplete="given-name" className={inputCls} maxLength={40}
+                     value={name} onChange={(e) => setName(e.target.value)} placeholder="Alex" />
+              <p className="mt-1.5 text-xs text-pine-700/70">Just your first name. Notes sent to that name will show up in your inbox.</p>
             </div>
             {err && <p className="rounded-lg bg-berry-100 px-3 py-2 text-sm font-bold text-berry-700" role="alert">{err}</p>}
             <button type="submit" className={`${btnPrimary} w-full`}>Sign in</button>
@@ -756,8 +757,8 @@
         setErr('');
         const to = recipient.trim().replace(/\s+/g, ' ');
         const body = text.trim();
-        if (to.length < 2) return setErr("Enter your classmate's first and last name.");
-        if (myKeys.includes(normKey(to))) return setErr("That's you! Pick a classmate to surprise.");
+        if (to.length < 2) return setErr("Enter your classmate's first name.");
+        if (myKeys.includes(normKey(to)) || myKeys.includes(normKey(to).split(' ')[0])) return setErr("That's you! Pick a classmate to surprise.");
         if (!TREATS[treat]) return setErr('Choose a Chocolate Bar or a Candy Cane.');
         if (body.length < 2) return setErr('Write a short holiday note.');
         if (body.length > CONFIG.MAX_MESSAGE_LENGTH) return setErr(`Keep your note under ${CONFIG.MAX_MESSAGE_LENGTH} characters.`);
@@ -828,8 +829,8 @@
               <div>
                 <label htmlFor="to" className="mb-1.5 block text-sm font-extrabold">Who is it for?</label>
                 <input id="to" className={inputCls} value={recipient} maxLength={80} autoComplete="off"
-                       onChange={(e) => setRecipient(e.target.value)} placeholder="Classmate's first and last name" />
-                <p className="mt-1.5 text-xs text-pine-700/70">Type their first and last name exactly, so it lands in the right inbox.</p>
+                       onChange={(e) => setRecipient(e.target.value)} placeholder="Classmate's first name" />
+                <p className="mt-1.5 text-xs text-pine-700/70">Type their first name, spelled the way they would spell it.</p>
               </div>
 
               <fieldset>
@@ -1362,9 +1363,17 @@
         notify('Signed out', 'info');
       }
 
-      const userKeys = useMemo(() => (user ? [user.email, user.name].filter(Boolean).map(normKey) : []), [user]);
+      const userKeys = useMemo(() => {
+        if (!user) return [];
+        const keys = [user.email, user.name].filter(Boolean).map(normKey);
+        if (user.name) keys.push(normKey(user.name).split(' ')[0]);
+        return Array.from(new Set(keys));
+      }, [user]);
       const inbox = useMemo(
-        () => notes.filter((m) => userKeys.includes(m.recipientKey || normKey(m.recipient))),
+        () => notes.filter((m) => {
+          const rk = m.recipientKey || normKey(m.recipient);
+          return userKeys.includes(rk) || userKeys.includes(rk.split(' ')[0]);
+        }),
         [notes, userKeys]);
       const board = useMemo(
         () => notes.filter((m) => m.senderPublic && !m.recipientHidden && !m.adminHidden),
