@@ -77,6 +77,7 @@
     .stamp-cane .stamp-emoji { background: #ffffff; box-shadow: 0 0 0 2px #c62f35; }
     .stamp-label { font-size: 8.5px; font-weight: 800; letter-spacing: .04em; line-height: 1; padding: 2px 4px; border-radius: 3px; }
     .stamp-cane .stamp-label { background: #ffffff; }
+    .stamp-post { background: linear-gradient(160deg, #23634d, #0c2a20); color: #f6e2b3; }
 
     /* Postmark */
     .postmark {
@@ -169,6 +170,7 @@
       // OPTIONAL: the public address of this page for the QR code. Leave '' to detect automatically.
       PUBLIC_APP_URL: '',
 
+      TREAT_PRICE_AED: 5,
       MAX_MESSAGE_LENGTH: 500,
       SEND_COOLDOWN_SECONDS: 15,
     };
@@ -377,13 +379,16 @@
     function publicShape(n) {
       return {
         id: n.id, createdAt: n.createdAt, recipient: n.recipient, recipientKey: n.recipientKey,
-        treat: n.treat, text: n.text, anonymous: !!n.anonymous,
+        text: n.text, anonymous: !!n.anonymous,
         senderName: n.anonymous ? '' : String(n.senderName || ''),
         senderPublic: !!n.senderPublic, recipientHidden: false, adminHidden: false,
       };
     }
     function senderShape(n) {
-      return { senderName: String(n.senderName || ''), senderEmail: String(n.senderEmail || ''), senderMethod: String(n.senderMethod || '') };
+      return {
+        senderName: String(n.senderName || ''), senderEmail: String(n.senderEmail || ''), senderMethod: String(n.senderMethod || ''),
+        treat: TREATS[n.treat] ? n.treat : '', paid: !!n.paid,
+      };
     }
     function reviewShape(n) {
       return {
@@ -433,6 +438,7 @@
         },
         async setRecipientHidden(id, v) { edit('notes', (o) => { if (o[id]) o[id].recipientHidden = !!v; }); },
         async setAdminHidden(id, v) { edit('notes', (o) => { if (o[id]) o[id].adminHidden = !!v; }); },
+        async setPaid(id, flagged, v) { edit(flagged ? 'review' : 'senders', (o) => { if (o[id]) o[id].paid = !!v; }); },
         async approve(n) {
           edit('notes', (o) => { o[n.id] = publicShape(n); });
           edit('senders', (o) => { o[n.id] = senderShape(n); });
@@ -478,6 +484,7 @@
         },
         setRecipientHidden: (id, v) => db.ref(`notes/${id}/recipientHidden`).set(!!v),
         setAdminHidden: (id, v) => db.ref(`notes/${id}/adminHidden`).set(!!v),
+        setPaid: (id, flagged, v) => db.ref(`${flagged ? 'review' : 'senders'}/${id}/paid`).set(!!v),
         approve: (n) => db.ref().update({
           ['notes/' + n.id]: publicShape(n), ['senders/' + n.id]: senderShape(n), ['review/' + n.id]: null,
         }),
@@ -616,7 +623,7 @@
     function Stamp({ treat, className = '' }) {
       return (
         <div className={`stamp ${className}`} title={treat.label}>
-          <div className={`stamp-inner ${treat.id === 'candycane' ? 'stamp-cane' : 'stamp-choc'}`}>
+          <div className={`stamp-inner ${treat.id === 'candycane' ? 'stamp-cane' : treat.id === 'chocolate' ? 'stamp-choc' : 'stamp-post'}`}>
             <span className="stamp-emoji" aria-hidden="true">{treat.emoji}</span>
             <span className="stamp-label">{treat.stampText}</span>
           </div>
@@ -624,20 +631,21 @@
       );
     }
 
-    function Postcard({ msg, publicView = false, isNew = false, tilt = 0, footer = null }) {
-      const treat = TREATS[msg.treat] || TREATS.chocolate;
+    function Postcard({ msg, publicView = false, isNew = false, tilt = 0, footer = null, showTreat = false }) {
+      const treat = showTreat ? TREATS[msg.treat] : null;
       const from = msg.anonymous ? 'Your Secret Santa 🎅' : msg.senderName;
       const to = publicView ? publicName(msg.recipient) : msg.recipient;
       return (
         <article className="relative rounded-2xl bg-frost p-5 text-pine-900 shadow-card"
                  style={tilt ? { transform: `rotate(${tilt}deg)` } : undefined}>
-          <Stamp treat={treat} className="absolute right-4 top-4 rotate-3" />
+          {treat ? <Stamp treat={treat} className="absolute right-4 top-4 rotate-3" />
+                 : <Stamp treat={{ id: 'post', emoji: '🎄', label: 'North Pole Post', stampText: 'North Pole' }} className="absolute right-4 top-4 rotate-3" />}
           <div className="postmark hidden sm:flex" aria-hidden="true">North Pole<br />{postmarkDate(msg.createdAt)}</div>
           <div className="pr-24 sm:pr-40">
             {isNew && <span className="mb-2 inline-block rounded-full bg-gold-400 px-2.5 py-0.5 text-xs font-extrabold text-pine-900">New</span>}
             <div className="text-sm text-pine-700/70">To</div>
             <div className="font-display text-xl font-semibold leading-tight break-words">{to}</div>
-            <div className="mt-1 text-sm font-bold text-pine-700/80">with a {treat.label.toLowerCase()} {treat.emoji}</div>
+            {treat && <div className="mt-1 text-sm font-bold text-pine-700/80">with a {treat.label.toLowerCase()} {treat.emoji} (only you and teachers see this)</div>}
           </div>
           <p className="mt-4 min-h-[3rem] whitespace-pre-wrap break-words font-hand text-[1.6rem] leading-snug text-pine-900">{msg.text}</p>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t-2 border-dashed border-frost-300 pt-3 text-sm">
@@ -734,7 +742,8 @@
        ===================================================================== */
     function SendForm({ user, onSend }) {
       const [recipient, setRecipient] = useState('');
-      const [treat, setTreat] = useState('chocolate');
+      const [treat, setTreat] = useState('');
+      const [treatErr, setTreatErr] = useState(false);
       const [text, setText] = useState('');
       const [anonymous, setAnonymous] = useState(true);
       const [isPublic, setIsPublic] = useState(false);
@@ -759,7 +768,7 @@
         const body = text.trim();
         if (to.length < 2) return setErr("Enter your classmate's first name.");
         if (myKeys.includes(normKey(to)) || myKeys.includes(normKey(to).split(' ')[0])) return setErr("That's you! Pick a classmate to surprise.");
-        if (!TREATS[treat]) return setErr('Choose a Chocolate Bar or a Candy Cane.');
+        if (!TREATS[treat]) { setTreatErr(true); return setErr(`Pick a Chocolate Bar or a Candy Cane (AED ${CONFIG.TREAT_PRICE_AED}) before sending.`); }
         if (body.length < 2) return setErr('Write a short holiday note.');
         if (body.length > CONFIG.MAX_MESSAGE_LENGTH) return setErr(`Keep your note under ${CONFIG.MAX_MESSAGE_LENGTH} characters.`);
 
@@ -798,7 +807,7 @@
           setBlocked(result.categories);   // keep the text so the student can revise it
         } else {
           setSent(msg);
-          setRecipient(''); setText(''); setIsPublic(false); setAnonymous(true); setTreat('chocolate');
+          setRecipient(''); setText(''); setIsPublic(false); setAnonymous(true); setTreat('');
         }
       }
 
@@ -809,8 +818,11 @@
             <div className="text-6xl" aria-hidden="true">{t.emoji}</div>
             <h2 className="mt-3 font-display text-3xl font-extrabold">Delivered to {sent.recipient}</h2>
             <p className="mt-2 text-pine-700/80">
-              Your {t.label.toLowerCase()} and note are waiting in their inbox{sent.anonymous ? ', signed by a Secret Santa' : ''}.
+              Your note is waiting in their inbox{sent.anonymous ? ', signed by a Secret Santa' : ''}.
               {sent.senderPublic ? ' It will also appear on the Bulletin Board.' : ''}
+            </p>
+            <p className="mx-auto mt-4 max-w-sm rounded-xl bg-gold-200 px-4 py-3 text-sm font-bold text-pine-900">
+              Remember to pay AED {CONFIG.TREAT_PRICE_AED} to your teacher for the {t.label.toLowerCase()}.
             </p>
             <button className={`${btnPrimary} mt-6`} onClick={() => setSent(null)}>Send another note</button>
           </Panel>
@@ -834,13 +846,17 @@
               </div>
 
               <fieldset>
-                <legend className="mb-2 text-sm font-extrabold">Pick a treat</legend>
-                <div className="grid grid-cols-2 gap-3">
+                <legend className="mb-1 text-sm font-extrabold">Pick a treat <span className="text-berry-600">(required)</span></legend>
+                <p className="mb-2 text-xs text-pine-700/70">Each treat costs AED {CONFIG.TREAT_PRICE_AED}, paid to your teacher. Only teachers can see which one you chose.</p>
+                <div className={`grid grid-cols-2 gap-3 rounded-2xl ${treatErr && !treat ? 'ring-4 ring-berry-600/30' : ''}`}>
                   {Object.values(TREATS).map((t) => (
                     <label key={t.id} className={`flex cursor-pointer items-center gap-3 rounded-2xl border-2 bg-white p-3 transition ${treat === t.id ? 'border-berry-600 ring-4 ring-berry-600/15' : 'border-frost-300 hover:border-pine-600'}`}>
-                      <input type="radio" name="treat" value={t.id} checked={treat === t.id} onChange={() => setTreat(t.id)} className="sr-only" />
+                      <input type="radio" name="treat" value={t.id} checked={treat === t.id} onChange={() => { setTreat(t.id); setTreatErr(false); }} className="sr-only" />
                       <span className="text-3xl" aria-hidden="true">{t.emoji}</span>
-                      <span className="font-extrabold leading-tight">{t.label}</span>
+                      <span className="leading-tight">
+                        <span className="block font-extrabold">{t.label}</span>
+                        <span className="block text-sm font-bold text-berry-600">AED {CONFIG.TREAT_PRICE_AED}</span>
+                      </span>
                     </label>
                   ))}
                 </div>
@@ -883,14 +899,14 @@
               {err && <p className="rounded-lg bg-berry-100 px-3 py-2 text-sm font-bold text-berry-700" role="alert">{err}</p>}
 
               <button type="submit" className={`${btnPrimary} w-full text-lg`} disabled={sending}>
-                {sending ? 'Sending…' : `Send ${TREATS[treat].emoji} and note`}
+                {sending ? 'Sending…' : TREATS[treat] ? `Send ${TREATS[treat].emoji} and note` : 'Send note'}
               </button>
             </form>
           </Panel>
 
           <aside className="space-y-3 lg:sticky lg:top-6 lg:self-start">
             <p className="px-1 text-sm font-bold text-frost/70">Preview</p>
-            <Postcard msg={draft} />
+            <Postcard msg={draft} showTreat={!!TREATS[treat]} />
           </aside>
 
           {blocked && (
@@ -927,7 +943,6 @@
       const [seenAtOpen] = useState(() => new Set(seen));
       useEffect(() => { markSeen(messages.map((m) => m.id)); }, [messages, markSeen]);
 
-      const counts = messages.reduce((acc, m) => { acc[m.treat] = (acc[m.treat] || 0) + 1; return acc; }, {});
       const who = user.name || user.email;
 
       return (
@@ -937,7 +952,7 @@
               <h2 className="font-display text-3xl font-extrabold text-frost sm:text-4xl">{who}'s inbox</h2>
               <p className="mt-1 text-frost/75">
                 {messages.length === 0 ? 'Nothing here yet.' :
-                  `${messages.length} note${messages.length === 1 ? '' : 's'}: ${counts.chocolate || 0} 🍫 and ${counts.candycane || 0} 🍬`}
+                  `${messages.length} note${messages.length === 1 ? '' : 's'} for you`}
               </p>
             </div>
 
@@ -989,33 +1004,20 @@
     const TILTS = [-1.2, 0.9, -0.4, 1.3, -0.9, 0.5];
 
     function Bulletin({ messages, loading }) {
-      const [filter, setFilter] = useState('all');
       const [q, setQ] = useState('');
       const query = normKey(q);
       const list = messages.filter((m) =>
-        (filter === 'all' || m.treat === filter) &&
         (!query || normKey(m.text).includes(query) || normKey(publicName(m.recipient)).includes(query) || (!m.anonymous && normKey(m.senderName).includes(query))));
-      const choc = messages.filter((m) => m.treat === 'chocolate').length;
-      const cane = messages.filter((m) => m.treat === 'candycane').length;
 
       return (
         <section className="fade-in">
           <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
             <div>
               <h2 className="font-display text-3xl font-extrabold text-frost sm:text-4xl">Holiday Bulletin Board</h2>
-              <p className="mt-1 text-frost/75">{messages.length} note{messages.length === 1 ? '' : 's'} shared with the school: {choc} 🍫 and {cane} 🍬</p>
+              <p className="mt-1 text-frost/75">{messages.length} note{messages.length === 1 ? '' : 's'} shared with the school</p>
             </div>
             <div className="flex w-full flex-wrap gap-2 sm:w-auto">
               <input className={`${inputCls} py-2 sm:w-56`} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search notes or names" aria-label="Search the board" />
-              <div className="flex gap-1 rounded-xl bg-pine-800 p-1">
-                {[['all', 'All'], ['chocolate', '🍫'], ['candycane', '🍬']].map(([id, label]) => (
-                  <button key={id} onClick={() => setFilter(id)} aria-pressed={filter === id}
-                          aria-label={id === 'all' ? 'Show all treats' : `Show ${TREATS[id].label} notes`}
-                          className={`rounded-lg px-3 py-1.5 text-sm font-extrabold transition ${filter === id ? 'bg-frost text-pine-900' : 'text-frost/80 hover:text-frost'}`}>
-                    {label}
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
 
@@ -1027,7 +1029,7 @@
                 <div className="text-4xl" aria-hidden="true">📌</div>
                 <p className="mt-2 font-display text-xl font-semibold">{messages.length ? 'No notes match that search' : 'The board is empty'}</p>
                 <p className="mt-1 text-sm text-pine-700/80">
-                  {messages.length ? 'Try a different name or treat.' : 'Tick "Display this message on the public Holiday Bulletin Board?" when you send a note.'}
+                  {messages.length ? 'Try a different name or word.' : 'Tick "Display this message on the public Holiday Bulletin Board?" when you send a note.'}
                 </p>
               </div>
             ) : (
@@ -1071,8 +1073,8 @@
       );
     }
 
-    function AdminMessageCard({ m, onApprove, onDelete, onToggleBoard }) {
-      const t = TREATS[m.treat] || TREATS.chocolate;
+    function AdminMessageCard({ m, onApprove, onDelete, onToggleBoard, onTogglePaid }) {
+      const t = TREATS[m.treat] || { emoji: '❔', label: 'No treat recorded' };
       const selfHarm = (m.flags || []).some((f) => f.category === CAT.SELFHARM);
       const onBoard = m.senderPublic && !m.recipientHidden && !m.adminHidden;
       return (
@@ -1082,12 +1084,20 @@
               <div><span className="text-pine-700/70">From </span><b>{m.senderName}</b>{m.senderEmail ? <span className="text-pine-700/70"> ({m.senderEmail})</span> : <span className="text-pine-700/70"> (name sign-in)</span>}</div>
               <div><span className="text-pine-700/70">To </span><b>{m.recipient}</b></div>
               <div className="text-xs text-pine-700/70">
-                {t.emoji} {t.label}, {m.anonymous ? 'sent anonymously' : 'name visible'}, {m.senderPublic ? 'asked for Bulletin Board' : 'private'}, {prettyDate(m.createdAt)}
+                {m.anonymous ? 'sent anonymously' : 'name visible'}, {m.senderPublic ? 'asked for Bulletin Board' : 'private'}, {prettyDate(m.createdAt)}
               </div>
             </div>
             <span className={`rounded-full px-3 py-1 text-xs font-extrabold ${m.status === 'flagged' ? 'bg-berry-100 text-berry-700' : 'bg-pine-600/15 text-pine-700'}`}>
               {m.status === 'flagged' ? 'Needs review' : 'Delivered'}
             </span>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-gold-200 px-3 py-1 text-sm font-extrabold text-pine-900">{t.emoji} {t.label}</span>
+            <button onClick={() => onTogglePaid(m)} aria-pressed={!!m.paid}
+                    className={`rounded-full px-3 py-1 text-sm font-extrabold transition ${m.paid ? 'bg-pine-600 text-white' : 'border-2 border-berry-600 text-berry-600 hover:bg-berry-100'}`}>
+              {m.paid ? `✓ Paid AED ${CONFIG.TREAT_PRICE_AED}` : `Not paid yet: mark as paid`}
+            </button>
           </div>
 
           {selfHarm && (
@@ -1179,7 +1189,7 @@
       }
 
       const flagged = toList(review).map((m) => ({ ...m, status: 'flagged' }));
-      const delivered = notes.map((n) => ({ ...n, ...(senders[n.id] || {}), status: 'approved' }));
+      const delivered = notes.map((n) => { const sd = senders[n.id] || {}; return { ...n, ...sd, treat: sd.treat || n.treat || '', status: 'approved' }; });
       const onBoard = notes.filter((m) => m.senderPublic && !m.recipientHidden && !m.adminHidden);
 
       const act = async (fn, okMsg, kind = 'success') => {
@@ -1187,6 +1197,7 @@
         catch (e) { notify(friendlyError(e), 'error'); }
       };
       const approve = (m) => act(() => Backend.approve(m), `Approved and delivered to ${m.recipient}`);
+      const togglePaid = (m) => act(() => Backend.setPaid(m.id, m.status === 'flagged', !m.paid), m.paid ? 'Marked as not paid' : 'Marked as paid', 'info');
       const del = (m) => {
         if (!window.confirm(`Delete this note to ${m.recipient}? This can't be undone.`)) return;
         act(() => (m.status === 'flagged' ? Backend.deleteReview(m.id) : Backend.deleteNote(m.id)), 'Note deleted', 'info');
@@ -1216,9 +1227,14 @@
         (status === 'all' || m.status === status) &&
         (!query || [m.text, m.recipient, m.senderName, m.senderEmail].some((s) => normKey(s).includes(query))));
 
+      const paidCount = everything.filter((m) => m.paid).length;
       const stats = [
         { label: 'Need review', value: flagged.length, tone: 'text-berry-600' },
         { label: 'Delivered', value: delivered.length, tone: 'text-pine-700' },
+        { label: '🍫 Chocolate bars', value: everything.filter((m) => m.treat === 'chocolate').length, tone: 'text-cocoa-600' },
+        { label: '🍬 Candy canes', value: everything.filter((m) => m.treat === 'candycane').length, tone: 'text-berry-600' },
+        { label: `Paid (AED ${paidCount * CONFIG.TREAT_PRICE_AED})`, value: paidCount, tone: 'text-pine-700' },
+        { label: 'Not paid yet', value: everything.length - paidCount, tone: 'text-berry-600' },
         { label: 'On the board', value: onBoard.length, tone: 'text-pine-700' },
         { label: 'Total notes', value: everything.length, tone: 'text-pine-700' },
       ];
@@ -1263,7 +1279,7 @@
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {flagged.map((m) => <AdminMessageCard key={m.id} m={m} onApprove={approve} onDelete={del} onToggleBoard={toggleBoard} />)}
+                  {flagged.map((m) => <AdminMessageCard key={m.id} m={m} onApprove={approve} onDelete={del} onToggleBoard={toggleBoard} onTogglePaid={togglePaid} />)}
                 </div>
               )}
             </Panel>
@@ -1283,7 +1299,7 @@
                 <p className="py-6 text-center text-pine-700/80">No notes match.</p>
               ) : (
                 <div className="space-y-4">
-                  {all.map((m) => <AdminMessageCard key={m.status + m.id} m={m} onApprove={approve} onDelete={del} onToggleBoard={toggleBoard} />)}
+                  {all.map((m) => <AdminMessageCard key={m.status + m.id} m={m} onApprove={approve} onDelete={del} onToggleBoard={toggleBoard} onTogglePaid={togglePaid} />)}
                 </div>
               )}
             </Panel>
